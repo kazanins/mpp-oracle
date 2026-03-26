@@ -7,7 +7,8 @@
     "dev": "concurrently \"vite --host\" \"node server/index.js\"",
     "server": "node server/index.js",
     "build": "vite build",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "postinstall": "node scripts/stub-phonemizer.js"
   },
   "dependencies": {
     "concurrently": "^9.1.0",
@@ -21,8 +22,5 @@
   },
   "devDependencies": {
     "vite": "^6.0.0"
-  },
-  "overrides": {
-    "phonemizer": "file:./phonemizer-stub"
   }
 }
