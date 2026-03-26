@@ -12,7 +12,7 @@ export function initLLM() {
 
   mppx = Mppx.create({
     polyfill: false,
-    methods: [tempo({ account, maxDeposit: '1' })],
+    methods: [tempo({ account, maxDeposit: '0.1' })],
   });
 
   console.log('LLM client ready, Oracle wallet:', config.oracleAddress);
