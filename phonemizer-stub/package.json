@@ -1,0 +1,6 @@
+{
+  "name": "phonemizer",
+  "version": "1.2.1",
+  "type": "module",
+  "main": "index.js"
+}
