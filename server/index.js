@@ -7,6 +7,8 @@
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Mppx, tempo } from 'mppx/express';
 import { privateKeyToAccount } from 'viem/accounts';
 import { config } from './config.js';
@@ -14,8 +16,13 @@ import { initLLM, askLLM } from './llm.js';
 import { initTTS, generateSpeech, audioToWav } from './tts.js';
 import { enqueue, setProcessHandler, addWsClient, removeWsClient, broadcast } from './queue.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(express.json());
+
+// Serve Vite-built static files in production
+const distPath = path.join(__dirname, '..', 'dist');
+app.use(express.static(distPath));
 
 // Oracle account for receiving payments
 const oracleAccount = privateKeyToAccount(config.oraclePrivateKey);
@@ -81,6 +88,8 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 wss.on('connection', (ws) => {
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
   addWsClient(ws);
   ws.on('close', () => removeWsClient(ws));
 });
@@ -115,13 +124,28 @@ setProcessHandler(async (item, broadcast) => {
   });
 });
 
+// SPA fallback — serve index.html for non-API routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
+// WebSocket heartbeat to keep connections alive on Railway
+setInterval(() => {
+  wss.clients.forEach(ws => {
+    if (ws.isAlive === false) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
 // Start
 async function start() {
   await initTTS();
   initLLM();
 
-  server.listen(config.port, () => {
-    console.log(`Oracle server listening on http://localhost:${config.port}`);
+  const port = process.env.PORT || config.port;
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`Oracle server listening on http://0.0.0.0:${port}`);
     console.log(`  POST /api/ask — $${(parseInt(config.questionPrice) / 1e6).toFixed(2)} per question`);
     console.log(`  WS   /ws      — live broadcast`);
   });
