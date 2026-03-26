@@ -9,6 +9,18 @@ function getAudioContext() {
   return audioContext;
 }
 
+// Pre-unlock AudioContext on first user interaction so speech plays instantly
+function unlockAudio() {
+  const ctx = getAudioContext();
+  if (ctx.state === 'suspended') ctx.resume();
+  document.removeEventListener('click', unlockAudio);
+  document.removeEventListener('touchstart', unlockAudio);
+  document.removeEventListener('keydown', unlockAudio);
+}
+document.addEventListener('click', unlockAudio);
+document.addEventListener('touchstart', unlockAudio);
+document.addEventListener('keydown', unlockAudio);
+
 // Viseme → blend shape mapping
 const visemeToMorphs = {
   'sil': { jawOpen: 0 },
@@ -42,7 +54,21 @@ const ALL_MOUTH_MORPHS = ['jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker',
  */
 export async function playWithLipSync(base64Audio, timeline, setMorph) {
   const ctx = getAudioContext();
-  if (ctx.state === 'suspended') await ctx.resume();
+  if (ctx.state === 'suspended') {
+    // AudioContext blocked by browser autoplay policy — wait for user gesture
+    await new Promise((resolve) => {
+      const resume = async () => {
+        await ctx.resume();
+        document.removeEventListener('click', resume);
+        document.removeEventListener('touchstart', resume);
+        document.removeEventListener('keydown', resume);
+        resolve();
+      };
+      document.addEventListener('click', resume, { once: true });
+      document.addEventListener('touchstart', resume, { once: true });
+      document.addEventListener('keydown', resume, { once: true });
+    });
+  }
 
   // Decode base64 WAV
   const binaryString = atob(base64Audio);
