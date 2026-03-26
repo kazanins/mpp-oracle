@@ -17,7 +17,11 @@ async function init() {
   loadStatusEl.textContent = 'Building scene...';
   await initScene(document.getElementById('canvas-container'));
 
-  loadStatusEl.textContent = 'Connecting...';
+  // Show "Enter" button and wait for click (unlocks audio)
+  loadingEl.classList.add('ready');
+  await new Promise(resolve => {
+    document.getElementById('enter-btn').addEventListener('click', resolve, { once: true });
+  });
 
   // Connect to WebSocket for live broadcast
   connect({

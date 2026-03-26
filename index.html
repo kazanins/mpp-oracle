@@ -30,6 +30,16 @@
       transition: opacity 0.8s ease;
     }
     #loading.hidden { opacity: 0; pointer-events: none; }
+    #loading.ready .bar { display: none; }
+    #enter-btn {
+      display: none; margin-top: 1.5rem; background: none; border: 1px solid #444;
+      color: #e0d8cc; font-family: 'Cormorant Garamond', serif; font-weight: 300;
+      font-size: 1rem; letter-spacing: 0.15em; text-transform: uppercase;
+      padding: 0.7rem 2.5rem; cursor: pointer; transition: border-color 0.3s, color 0.3s;
+    }
+    #enter-btn:hover { border-color: #e0d8cc; color: #fff; }
+    #loading.ready #enter-btn { display: block; }
+    #loading.ready #load-status { display: none; }
     #loading h1 {
       font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: 2rem;
       letter-spacing: 0.15em; text-transform: uppercase; color: #e0d8cc; margin-bottom: 1.5rem;
@@ -98,6 +108,7 @@
     <h1>The Oracle</h1>
     <div class="bar"></div>
     <div id="load-status">Awakening...</div>
+    <button id="enter-btn">Enter</button>
   </div>
 
   <div id="canvas-container"></div>
