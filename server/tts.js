@@ -3,7 +3,6 @@
  * Returns audio as base64 WAV + viseme timeline for lip sync.
  */
 import { KokoroTTS, TextSplitterStream } from 'kokoro-js';
-import { phonemize } from 'phonemizer';
 import { config } from './config.js';
 
 let tts = null;
@@ -64,14 +63,30 @@ export async function initTTS() {
 export async function generateSpeech(text) {
   if (!tts) throw new Error('TTS not initialized');
 
-  // Get phonemes and audio in parallel
-  const lang = config.ttsVoice.startsWith('b') ? 'en-gb' : 'en-us';
-  const [phonemeChunks, audio] = await Promise.all([
-    phonemize(text, lang),
-    tts.generate(text, { voice: config.ttsVoice, speed: config.ttsSpeed }),
-  ]);
+  // Use Kokoro's stream to get phonemes (with TextSplitterStream close() fix)
+  // and generate audio separately
+  let fullPhonemes = '';
+  const splitter = new TextSplitterStream();
+  splitter.push(text);
+  splitter.close();
 
-  const fullPhonemes = phonemeChunks.join(' ');
+  const stream = tts.stream(splitter, { voice: config.ttsVoice, speed: config.ttsSpeed });
+  const audioChunks = [];
+  for await (const { phonemes: ipaString, audio: chunkAudio } of stream) {
+    fullPhonemes += ipaString + ' ';
+    // Collect audio samples
+    const samples = chunkAudio.audio;
+    audioChunks.push(samples);
+  }
+
+  // Concatenate all audio chunks
+  const totalLength = audioChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const samples = new Float32Array(totalLength);
+  let offset = 0;
+  for (const chunk of audioChunks) {
+    samples.set(chunk, offset);
+    offset += chunk.length;
+  }
   const samples = audio.audio;
   const duration = samples.length / 24000;
 
