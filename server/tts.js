@@ -87,7 +87,6 @@ export async function generateSpeech(text) {
     samples.set(chunk, offset);
     offset += chunk.length;
   }
-  const samples = audio.audio;
   const duration = samples.length / 24000;
 
   // Build viseme timeline
