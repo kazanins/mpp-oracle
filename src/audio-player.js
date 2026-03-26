@@ -64,25 +64,26 @@ export async function playWithLipSync(base64Audio, timeline, setMorph) {
     };
     source.start();
 
-    let lastViseme = null;
-
     const poll = () => {
       const elapsed = ctx.currentTime - startTime;
 
-      let currentViseme = 'sil';
+      // Find current amplitude from timeline
+      let amplitude = 0;
       for (let i = timeline.length - 1; i >= 0; i--) {
         if (elapsed >= timeline[i].startTime) {
-          currentViseme = timeline[i].viseme;
+          amplitude = timeline[i].amplitude || 0;
           break;
         }
       }
 
-      if (currentViseme !== lastViseme) {
-        lastViseme = currentViseme;
-        const morphs = visemeToMorphs[currentViseme] || {};
-        for (const name of ALL_MOUTH_MORPHS) setMorph(name, 0);
-        for (const [name, value] of Object.entries(morphs)) setMorph(name, value);
-      }
+      // Drive mouth from amplitude
+      const t = Date.now() * 0.01;
+      setMorph('jawOpen', amplitude * 0.7);
+      setMorph('mouthFunnel', amplitude * 0.3 * Math.max(0, Math.sin(t * 1.1)));
+      setMorph('mouthStretch_L', amplitude * 0.15 * Math.max(0, Math.sin(t * 1.3)));
+      setMorph('mouthStretch_R', amplitude * 0.15 * Math.max(0, Math.sin(t * 1.3)));
+      setMorph('mouthLowerDown_L', amplitude * 0.2 * Math.max(0, Math.cos(t * 1.2)));
+      setMorph('mouthLowerDown_R', amplitude * 0.2 * Math.max(0, Math.cos(t * 1.2)));
 
       if (elapsed < audioBuffer.duration) {
         requestAnimationFrame(poll);

@@ -2,7 +2,7 @@
  * Server-side TTS — generates audio + phoneme timeline using Kokoro.js.
  * Returns audio as base64 WAV + viseme timeline for lip sync.
  */
-import { KokoroTTS, TextSplitterStream } from 'kokoro-js';
+import { KokoroTTS } from 'kokoro-js';
 import { config } from './config.js';
 
 let tts = null;
@@ -63,41 +63,32 @@ export async function initTTS() {
 export async function generateSpeech(text) {
   if (!tts) throw new Error('TTS not initialized');
 
-  // Use Kokoro's stream to get phonemes (with TextSplitterStream close() fix)
-  // and generate audio separately
-  let fullPhonemes = '';
-  const splitter = new TextSplitterStream();
-  splitter.push(text);
-  splitter.close();
-
-  const stream = tts.stream(splitter, { voice: config.ttsVoice, speed: config.ttsSpeed });
-  const audioChunks = [];
-  for await (const { phonemes: ipaString, audio: chunkAudio } of stream) {
-    fullPhonemes += ipaString + ' ';
-    // Collect audio samples
-    const samples = chunkAudio.audio;
-    audioChunks.push(samples);
-  }
-
-  // Concatenate all audio chunks
-  const totalLength = audioChunks.reduce((sum, chunk) => sum + chunk.length, 0);
-  const samples = new Float32Array(totalLength);
-  let offset = 0;
-  for (const chunk of audioChunks) {
-    samples.set(chunk, offset);
-    offset += chunk.length;
-  }
+  // Generate full audio (no streaming — avoids phonemizer WASM crash on Railway)
+  const audio = await tts.generate(text, { voice: config.ttsVoice, speed: config.ttsSpeed });
+  const samples = audio.audio;
   const duration = samples.length / 24000;
 
-  // Build viseme timeline
-  const phonemes = parsePhonemes(fullPhonemes);
-  const phonemeDuration = phonemes.length > 0 ? duration / phonemes.length : 0;
-  const timeline = phonemes.map((p, i) => ({
-    startTime: i * phonemeDuration,
-    viseme: ipaToViseme[p] || 'sil',
-  }));
+  // Build amplitude-based timeline (no phoneme data available server-side)
+  // Sample amplitude at regular intervals for mouth animation
+  const INTERVAL = 0.05; // 50ms intervals
+  const timeline = [];
+  const samplesPerInterval = Math.floor(24000 * INTERVAL);
 
-  console.log(`[TTS] Generated ${duration.toFixed(1)}s audio, ${phonemes.length} phonemes`);
+  for (let i = 0; i < samples.length; i += samplesPerInterval) {
+    const end = Math.min(i + samplesPerInterval, samples.length);
+    let sum = 0;
+    for (let j = i; j < end; j++) {
+      sum += samples[j] * samples[j];
+    }
+    const rms = Math.sqrt(sum / (end - i));
+    const amplitude = Math.min(1, rms * 6);
+    timeline.push({
+      startTime: (i / 24000),
+      amplitude,
+    });
+  }
+
+  console.log(`[TTS] Generated ${duration.toFixed(1)}s audio, ${timeline.length} amplitude samples`);
 
   return {
     audio: samples,
