@@ -7,8 +7,7 @@
     "dev": "concurrently \"vite --host\" \"node server/index.js\"",
     "server": "node server/index.js",
     "build": "vite build",
-    "start": "node server/index.js",
-    "postinstall": "node scripts/stub-phonemizer.js"
+    "start": "node server/index.js"
   },
   "dependencies": {
     "concurrently": "^9.1.0",
