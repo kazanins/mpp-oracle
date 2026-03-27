@@ -117,11 +117,16 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
-    /* Status */
-    #status {
-      position: fixed; bottom: 1vh; left: 50%; transform: translateX(-50%);
-      font-size: 0.6rem; color: #333; letter-spacing: 0.1em; z-index: 10;
+    /* Footer */
+    #footer {
+      position: fixed; bottom: 2vh; left: 50%; transform: translateX(-50%);
+      font-size: 0.6rem; color: #444; letter-spacing: 0.05em; z-index: 10;
+      text-align: center;
     }
+    #footer a {
+      color: #666; text-decoration: none; transition: color 0.2s;
+    }
+    #footer a:hover { color: #e0d8cc; }
 
   </style>
 </head>
@@ -157,6 +162,10 @@
     <div id="queue-list"></div>
   </div>
 
+
+  <div id="footer">
+    Start building with <a href="https://mpp.dev" target="_blank">Machine Payments Protocol</a>. Follow <a href="https://x.com/mpp" target="_blank">@mpp</a> on X.
+  </div>
 
   <script type="module" src="/src/main.js"></script>
 </body>
