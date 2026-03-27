@@ -23,7 +23,9 @@ async function init() {
     document.getElementById('enter-btn').addEventListener('click', resolve, { once: true });
   });
 
-  // Connect to WebSocket for live broadcast
+  // Buffer answer text until audio arrives, then show + play together
+  let pendingAnswer = null;
+
   connect({
     onQueue: (queue) => {
       queueList.innerHTML = '';
@@ -41,23 +43,43 @@ async function init() {
       askerEl.classList.add('visible');
       answerEl.textContent = '';
       answerEl.classList.remove('visible');
+      pendingAnswer = null;
     },
     onAnswer: (text) => {
-      answerEl.textContent = text;
-      answerEl.classList.add('visible');
+      // Hold text until audio is ready
+      pendingAnswer = text;
     },
     onSpeak: async (audio, timeline, duration) => {
+      // Show text and play audio at the same time
+      if (pendingAnswer) {
+        answerEl.textContent = pendingAnswer;
+        answerEl.classList.add('visible');
+        pendingAnswer = null;
+      }
       await playWithLipSync(audio, timeline, setMorph);
-    },
-    onDone: () => {
+      // Audio finished — fade out after a beat
       setTimeout(() => {
         questionEl.classList.remove('visible');
         askerEl.classList.remove('visible');
         answerEl.classList.remove('visible');
-      }, 3000);
+      }, 2000);
+    },
+    onDone: () => {
+      // If no audio was sent (error path), show any pending text then fade
+      if (pendingAnswer) {
+        answerEl.textContent = pendingAnswer;
+        answerEl.classList.add('visible');
+        pendingAnswer = null;
+        setTimeout(() => {
+          questionEl.classList.remove('visible');
+          askerEl.classList.remove('visible');
+          answerEl.classList.remove('visible');
+        }, 5000);
+      }
     },
     onStatus: () => {},
     onError: (msg) => {
+      pendingAnswer = null;
       answerEl.textContent = msg;
       answerEl.classList.add('visible');
     },
