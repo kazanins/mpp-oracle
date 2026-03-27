@@ -1,0 +1,53 @@
+# MPP Oracle
+
+> A paid talking head that answers questions out loud. Pay $0.01 per question via Tempo MPP.
+
+The Oracle is a public display — a 3D head that speaks answers to questions submitted by anyone. Questions are queued and answered one at a time. All connected viewers see and hear the same thing.
+
+## API
+
+Base URL: https://mpp-oracle.up.railway.app
+
+### POST /api/ask
+
+Submit a question to the Oracle. Requires MPP payment ($0.01 USDC via Tempo charge).
+
+**Request:**
+```json
+{"question": "What is Bitcoin?"}
+```
+
+**Response:**
+```json
+{"ok": true}
+```
+
+The answer is broadcast to all viewers via WebSocket, not returned in the HTTP response. The 3D head speaks the answer with lip-synced audio.
+
+**Payment:** $0.01 USDC per question (Tempo MPP charge intent).
+
+**Example with tempo CLI:**
+```bash
+tempo request -X POST --json '{"question":"What is the meaning of life?"}' https://mpp-oracle.up.railway.app/api/ask
+```
+
+### GET /api/health
+
+Health check. No payment required.
+
+**Response:**
+```json
+{"ok": true, "queue": 0}
+```
+
+### WebSocket /ws
+
+Connect to receive live broadcasts of questions and answers.
+
+**Messages received:**
+- `{"type":"queue","queue":[{"question":"...","wallet":"0x..."}]}` — current queue state
+- `{"type":"active","question":"...","wallet":"0x..."}` — question being processed
+- `{"type":"status","status":"thinking"}` — Oracle is generating answer
+- `{"type":"answer","text":"..."}` — the answer text
+- `{"type":"done"}` — processing complete
+- `{"type":"error","message":"..."}` — error occurred
