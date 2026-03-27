@@ -17,7 +17,7 @@ export const config = {
   mppSecretKey: env.MPP_SECRET_KEY,
 
   // Pricing
-  questionPrice: '10000', // $0.01 in 6-decimal USDC
+  questionPrice: '0.01', // $0.01 USDC
   currency: '0x20c000000000000000000000b9537d11c60e8b50', // USDC mainnet
 
   // OpenRouter

@@ -127,7 +127,7 @@ async function start() {
   const port = process.env.PORT || config.port;
   server.listen(port, '0.0.0.0', () => {
     console.log(`Oracle server listening on http://0.0.0.0:${port}`);
-    console.log(`  POST /api/ask — $${(parseInt(config.questionPrice) / 1e6).toFixed(2)} per question`);
+    console.log(`  POST /api/ask — $${config.questionPrice} per question`);
     console.log(`  WS   /ws      — live broadcast`);
   });
 }
