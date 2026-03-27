@@ -21,17 +21,19 @@ const loadingEl = document.getElementById('loading');
 const loadStatusEl = document.getElementById('load-status');
 
 async function init() {
+  // Show prompt immediately — wait for click before loading anything
+  loadingEl.classList.add('ready');
+  await new Promise(resolve => {
+    document.getElementById('enter-btn').addEventListener('click', resolve, { once: true });
+  });
+  loadingEl.classList.remove('ready');
+  loadingEl.classList.add('loading');
+
   loadStatusEl.textContent = 'Building scene...';
   await initScene(document.getElementById('canvas-container'));
 
   loadStatusEl.textContent = 'Loading voice model...';
   await initTTS((status) => { loadStatusEl.textContent = status; });
-
-  // Show "Enter" button and wait for click (unlocks audio)
-  loadingEl.classList.add('ready');
-  await new Promise(resolve => {
-    document.getElementById('enter-btn').addEventListener('click', resolve, { once: true });
-  });
 
   // Connect to WebSocket for live broadcast
   connect({
