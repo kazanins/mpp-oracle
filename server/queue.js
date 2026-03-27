@@ -14,10 +14,7 @@ export function setProcessHandler(handler) {
 export function addWsClient(ws) {
   wsClients.add(ws);
   // Send current state
-  ws.send(JSON.stringify({ type: 'queue', queue: queue.map(q => ({ question: q.question, wallet: q.wallet })) }));
-  if (processing && queue[0]) {
-    ws.send(JSON.stringify({ type: 'active', question: queue[0].question, wallet: queue[0].wallet }));
-  }
+  ws.send(JSON.stringify({ type: 'queue', queue: queue.map(() => ({ question: 'Awaiting the Oracle...' })) }));
 }
 
 export function removeWsClient(ws) {
@@ -33,7 +30,7 @@ export function broadcast(msg) {
 
 export function enqueue(question, wallet) {
   queue.push({ question, wallet });
-  broadcast({ type: 'queue', queue: queue.map(q => ({ question: q.question, wallet: q.wallet })) });
+  broadcast({ type: 'queue', queue: queue.map(() => ({ question: 'Awaiting the Oracle...' })) });
   processNext();
 }
 
@@ -42,7 +39,6 @@ async function processNext() {
   processing = true;
 
   const item = queue[0];
-  broadcast({ type: 'active', question: item.question, wallet: item.wallet });
 
   try {
     await processHandler(item, broadcast);
@@ -53,7 +49,7 @@ async function processNext() {
 
   queue.shift();
   processing = false;
-  broadcast({ type: 'queue', queue: queue.map(q => ({ question: q.question, wallet: q.wallet })) });
+  broadcast({ type: 'queue', queue: queue.map(() => ({ question: 'Awaiting the Oracle...' })) });
   broadcast({ type: 'done' });
 
   // Process next in queue after a pause

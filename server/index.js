@@ -93,6 +93,15 @@ wss.on('connection', (ws) => {
   ws.on('close', () => removeWsClient(ws));
 });
 
+// Refusal phrases the LLM uses for inappropriate questions
+const REFUSAL_PHRASES = ["i won't answer", "not a worthy question", "i can't help with that",
+  "i won't engage", "not going to answer", "i refuse", "that's not appropriate"];
+
+function isRefusal(answer) {
+  const lower = answer.toLowerCase();
+  return REFUSAL_PHRASES.some(p => lower.includes(p));
+}
+
 // Process questions: LLM → broadcast text (client handles TTS)
 setProcessHandler(async (item, broadcast) => {
   const { question, wallet } = item;
@@ -101,6 +110,10 @@ setProcessHandler(async (item, broadcast) => {
   broadcast({ type: 'status', status: 'thinking' });
   const answer = await askLLM(question);
   console.log(`Answer: ${answer.slice(0, 80)}`);
+
+  // Censor question if LLM refused to answer
+  const displayQuestion = isRefusal(answer) ? '******' : question;
+  broadcast({ type: 'active', question: displayQuestion, wallet });
 
   // Send text — client generates speech via WebGPU Kokoro
   broadcast({ type: 'answer', text: answer });
