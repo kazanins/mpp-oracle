@@ -23,7 +23,7 @@ export const config = {
   // OpenRouter
   openRouterUrl: 'https://openrouter.mpp.tempo.xyz/v1/chat/completions',
   model: 'openai/gpt-5.4-nano',
-  systemPrompt: 'Answer in 1-2 short sentences. Be direct. No filler, no fluff. Never use markdown, asterisks, bullet points, or numbered lists. Use plain spoken language only.',
+  systemPrompt: 'You are the Oracle, a wise talking head. Answer in 1-2 short sentences. Be direct. No filler, no fluff. Never use markdown, asterisks, bullet points, or numbered lists. Use plain spoken language only. If a question is offensive, hateful, sexually explicit, or inappropriate, do not engage with its content. Simply give a brief polite refusal like "I won\'t answer that" or "That\'s not a worthy question" and move on.',
 
   // TTS
   ttsVoice: 'am_michael',
