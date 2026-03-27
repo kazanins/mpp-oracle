@@ -13,7 +13,6 @@ import { Mppx, tempo } from 'mppx/express';
 import { privateKeyToAccount } from 'viem/accounts';
 import { config } from './config.js';
 import { initLLM, askLLM } from './llm.js';
-import { initTTS, generateSpeech, audioToWav } from './tts.js';
 import { enqueue, setProcessHandler, addWsClient, removeWsClient, broadcast } from './queue.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -94,34 +93,17 @@ wss.on('connection', (ws) => {
   ws.on('close', () => removeWsClient(ws));
 });
 
-// Process questions: LLM → TTS → broadcast
+// Process questions: LLM → broadcast text (client handles TTS)
 setProcessHandler(async (item, broadcast) => {
   const { question, wallet } = item;
   console.log(`Processing: "${question}" from ${wallet}`);
 
-  // Get LLM answer
   broadcast({ type: 'status', status: 'thinking' });
   const answer = await askLLM(question);
   console.log(`Answer: ${answer.slice(0, 80)}`);
 
-  // Show answer text immediately
+  // Send text — client generates speech via WebGPU Kokoro
   broadcast({ type: 'answer', text: answer });
-
-  // Generate TTS
-  broadcast({ type: 'status', status: 'speaking' });
-  const speech = await generateSpeech(answer);
-
-  // Convert to WAV and base64 for sending over WebSocket
-  const wavBuffer = audioToWav(speech.audio, speech.sampleRate);
-  const base64Audio = Buffer.from(wavBuffer).toString('base64');
-
-  // Send audio + timeline to all clients
-  broadcast({
-    type: 'speak',
-    audio: base64Audio,
-    timeline: speech.timeline,
-    duration: speech.duration,
-  });
 });
 
 // SPA fallback — serve index.html for non-API routes
@@ -140,7 +122,6 @@ setInterval(() => {
 
 // Start
 async function start() {
-  await initTTS();
   initLLM();
 
   const port = process.env.PORT || config.port;

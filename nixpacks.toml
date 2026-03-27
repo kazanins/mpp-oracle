@@ -1,2 +1,1 @@
-[phases.setup]
-aptPkgs = ["espeak-ng"]
+# No special system packages needed — TTS runs client-side

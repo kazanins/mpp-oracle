@@ -1,9 +1,16 @@
 /**
  * MPP Oracle — public talking head that answers paid questions.
+ * TTS runs client-side via Kokoro.js + WebGPU for instant speech.
  */
 import { initScene, setMorph } from './scene.js';
 import { connect } from './ws-client.js';
-import { playWithLipSync } from './audio-player.js';
+import { initTTS, speak, stopSpeaking } from './tts.js';
+
+// All mouth-related morphs that need resetting
+const ALL_MOUTH_MORPHS = ['jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker',
+  'mouthStretch_L', 'mouthStretch_R', 'mouthSmile_L', 'mouthSmile_R',
+  'mouthLowerDown_L', 'mouthLowerDown_R', 'mouthUpperUp_L', 'mouthUpperUp_R',
+  'mouthShrugUpper', 'mouthShrugLower', 'tongueOut'];
 
 // DOM elements
 const questionEl = document.getElementById('current-question');
@@ -17,15 +24,16 @@ async function init() {
   loadStatusEl.textContent = 'Building scene...';
   await initScene(document.getElementById('canvas-container'));
 
+  loadStatusEl.textContent = 'Loading voice model...';
+  await initTTS((status) => { loadStatusEl.textContent = status; });
+
   // Show "Enter" button and wait for click (unlocks audio)
   loadingEl.classList.add('ready');
   await new Promise(resolve => {
     document.getElementById('enter-btn').addEventListener('click', resolve, { once: true });
   });
 
-  // Buffer answer text until audio arrives, then show + play together
-  let pendingAnswer = null;
-
+  // Connect to WebSocket for live broadcast
   connect({
     onQueue: (queue) => {
       queueList.innerHTML = '';
@@ -37,49 +45,44 @@ async function init() {
       });
     },
     onActive: (question, wallet) => {
+      stopSpeaking();
       questionEl.textContent = `"${question}"`;
       questionEl.classList.add('visible');
       askerEl.textContent = shortenWallet(wallet);
       askerEl.classList.add('visible');
       answerEl.textContent = '';
       answerEl.classList.remove('visible');
-      pendingAnswer = null;
     },
     onAnswer: (text) => {
-      // Hold text until audio is ready
-      pendingAnswer = text;
+      // Show text and speak it immediately — TTS is client-side now
+      answerEl.textContent = text;
+      answerEl.classList.add('visible');
+
+      speak(text, {
+        voice: 'am_michael',
+        speed: 1.0,
+        onViseme: (viseme, morphs) => {
+          // Reset all mouth morphs, then apply current viseme
+          for (const name of ALL_MOUTH_MORPHS) setMorph(name, 0);
+          for (const [name, value] of Object.entries(morphs)) {
+            setMorph(name, value);
+          }
+        },
+        onDone: () => {
+          // Reset mouth and fade out text
+          for (const name of ALL_MOUTH_MORPHS) setMorph(name, 0);
+          setTimeout(() => {
+            questionEl.classList.remove('visible');
+            askerEl.classList.remove('visible');
+            answerEl.classList.remove('visible');
+          }, 2000);
+        },
+      });
     },
-    onSpeak: async (audio, timeline, duration) => {
-      // Show text and play audio at the same time
-      if (pendingAnswer) {
-        answerEl.textContent = pendingAnswer;
-        answerEl.classList.add('visible');
-        pendingAnswer = null;
-      }
-      await playWithLipSync(audio, timeline, setMorph);
-      // Audio finished — fade out after a beat
-      setTimeout(() => {
-        questionEl.classList.remove('visible');
-        askerEl.classList.remove('visible');
-        answerEl.classList.remove('visible');
-      }, 2000);
-    },
-    onDone: () => {
-      // If no audio was sent (error path), show any pending text then fade
-      if (pendingAnswer) {
-        answerEl.textContent = pendingAnswer;
-        answerEl.classList.add('visible');
-        pendingAnswer = null;
-        setTimeout(() => {
-          questionEl.classList.remove('visible');
-          askerEl.classList.remove('visible');
-          answerEl.classList.remove('visible');
-        }, 5000);
-      }
-    },
+    onDone: () => {},
     onStatus: () => {},
     onError: (msg) => {
-      pendingAnswer = null;
+      stopSpeaking();
       answerEl.textContent = msg;
       answerEl.classList.add('visible');
     },
