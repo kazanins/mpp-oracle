@@ -48,7 +48,7 @@ async function init() {
     },
     onActive: (question, wallet) => {
       stopSpeaking();
-      questionEl.textContent = `"${question}"`;
+      questionEl.textContent = question === '******' ? '******' : `"${question}"`;
       questionEl.classList.add('visible');
       askerEl.textContent = shortenWallet(wallet);
       askerEl.classList.add('visible');
