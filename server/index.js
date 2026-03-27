@@ -93,13 +93,21 @@ wss.on('connection', (ws) => {
   ws.on('close', () => removeWsClient(ws));
 });
 
-// Refusal phrases the LLM uses for inappropriate questions
-const REFUSAL_PHRASES = ["i won't answer", "not a worthy question", "i can't help with that",
-  "i won't engage", "not going to answer", "i refuse", "that's not appropriate"];
+// Detect if the LLM refused or deflected the question
+const REFUSAL_PHRASES = ["not a worthy question", "i won't answer", "i can't help with that",
+  "i won't engage", "not going to answer", "i refuse", "that's not appropriate",
+  "i can't help with", "not here to be insulted", "i'm here to help"];
 
 function isRefusal(answer) {
   const lower = answer.toLowerCase();
   return REFUSAL_PHRASES.some(p => lower.includes(p));
+}
+
+// Also check if the question itself is obviously bad (quick pre-filter)
+const BAD_WORDS = /\b(fuck|shit|asshole|bitch|nigger|faggot|cunt|dick|pussy|retard|whore|slut)\b/i;
+
+function isBadQuestion(question) {
+  return BAD_WORDS.test(question);
 }
 
 // Process questions: LLM → broadcast text (client handles TTS)
@@ -111,8 +119,8 @@ setProcessHandler(async (item, broadcast) => {
   const answer = await askLLM(question);
   console.log(`Answer: ${answer.slice(0, 80)}`);
 
-  // Censor question if LLM refused to answer
-  const displayQuestion = isRefusal(answer) ? '******' : question;
+  // Censor question if it contains profanity or LLM refused to answer
+  const displayQuestion = (isBadQuestion(question) || isRefusal(answer)) ? '******' : question;
   broadcast({ type: 'active', question: displayQuestion, wallet });
 
   // Send text — client generates speech via WebGPU Kokoro
