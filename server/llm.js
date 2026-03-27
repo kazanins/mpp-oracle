@@ -1,5 +1,6 @@
 /**
  * LLM client — Oracle pays OpenRouter via mppx/client session.
+ * Closes channel on graceful shutdown to recover deposits.
  */
 import { privateKeyToAccount } from 'viem/accounts';
 import { Mppx, tempo } from 'mppx/client';
@@ -12,7 +13,7 @@ export function initLLM() {
 
   mppx = Mppx.create({
     polyfill: false,
-    methods: [tempo({ account, maxDeposit: '0.1' })],
+    methods: [tempo({ account, maxDeposit: '0.01' })],
   });
 
   console.log('LLM client ready, Oracle wallet:', config.oracleAddress);
