@@ -50,7 +50,7 @@ function parsePhonemes(ipa) {
 export async function initTTS() {
   console.log('Loading TTS model...');
   tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
-    dtype: 'q8',
+    dtype: 'q4',
     device: 'cpu',
   });
   console.log('TTS model ready');
